@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Chatbot - Healthcare</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .chat-container {
+            width: 95%;
+            max-width: 1200px;
+            height: 95vh;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .connection-status {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        .connected { background: #2ecc71; }
+        .disconnected { background: #e74c3c; }
+        .connecting { background: #f39c12; }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .rag-indicator {
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .chat-main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        
+        .context-panel {
+            width: 300px;
+            background: #f1f3f4;
+            border-left: 1px solid #e0e0e0;
+            padding: 15px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        
+        .context-section {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .context-section h4 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 13px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+        }
+        
+        .context-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 4px 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+        
+        .context-item:last-child {
+            border-bottom: none;
+        }
+        
+        .confidence-bar {
+            width: 60px;
+            height: 4px;
+            background: #e0e0e0;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #feca57, #48cab3);
+            transition: width 0.3s ease;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .user-message {
+            text-align: right;
+        }
+        
+        .user-message .message-content {
+            background: #007bff;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 18px 18px 4px 18px;
+            display: inline-block;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        
+        .bot-message .message-content {
+            background: white;
+            color: #333;
+            padding: 12px 16px;
+            border-radius: 18px 18px 18px 4px;
+            display: inline-block;
+            max-width: 70%;
+            word-wrap: break-word;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .enhanced-message {
+            border-left: 4px solid #4CAF50;
+            padding-left: 12px;
+        }
+        
+        .enhanced-message .message-content {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+        
+        .context-indicators {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .context-tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+        
+        .context-tag.symptoms { background: #FF6B6B; }
+        .context-tag.entities { background: #4ECDC4; }
+        .context-tag.confidence { background: #45B7D1; }
+        .context-tag.urgency { background: #FFA726; }
+        .context-tag.state { background: #9575CD; }
+        
+        .system-message .message-content {
+            background: #e3f2fd;
+            color: #1565c0;
+            padding: 12px 16px;
+            border-radius: 10px;
+            display: block;
+            margin: 10px 0;
+            font-size: 14px;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .timestamp {
+            font-size: 11px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .processing-time {
+            color: #666;
+            font-style: italic;
+        }
+        
+        .enhanced-indicator {
+            color: #4CAF50;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        
+        .chat-input {
+            border-top: 1px solid #eee;
+            padding: 20px;
+            background: white;
+        }
+        
+        .input-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .control-group label {
+            font-size: 12px;
+            color: #666;
+            min-width: 80px;
+        }
+        
+        .control-group input, .control-group select {
+            padding: 5px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 80px;
+        }
+        
+        .session-controls {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-small:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #messageInput {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #eee;
+            border-radius: 25px;
+            outline: none;
+            transition: border-color 0.3s;
+            resize: none;
+            min-height: 20px;
+            max-height: 100px;
+        }
+        
+        #messageInput:focus {
+            border-color: #007bff;
+        }
+        
+        #sendButton {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        
+        #sendButton:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        #sendButton:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #666;
+        }
+        
+        .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #667eea;
+            animation: bounce 1.5s infinite ease-in-out;
+        }
+        
+        .dot:nth-child(1) { animation-delay: -0.3s; }
+        .dot:nth-child(2) { animation-delay: -0.1s; }
+        .dot:nth-child(3) { animation-delay: 0.1s; }
+        
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .conversation-stats {
+            background: white;
+            padding: 8px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-size: 11px;
+        }
+        
+        .urgency-indicator {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .urgency-low { background: #d4edda; color: #155724; }
+        .urgency-moderate { background: #fff3cd; color: #856404; }
+        .urgency-high { background: #f8d7da; color: #721c24; }
+        .urgency-critical { background: #d73527; color: white; animation: blink 1s infinite; }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.5; }
+        }
+        
+        @media (max-width: 768px) {
+            .chat-main {
+                flex-direction: column;
+            }
+            
+            .context-panel {
+                width: 100%;
+                max-height: 200px;
+                order: -1;
+            }
+            
+            .input-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .session-controls {
+                margin-left: 0;
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <div class="rag-indicator">🧠 RAG Enhanced</div>
+            <h1>
+                <span class="connection-status" id="connectionStatus"></span>
+                Medical AI Assistant
+            </h1>
+            <p>Intelligent Conversation with Memory & Context Analysis</p>
+        </div>
+        
+        <div class="chat-main">
+            <div class="chat-messages" id="chatMessages">
+                <div class="message system-message">
+                    <div class="message-content">
+                        🧠 <strong>RAG Medical Assistant</strong><br>
+                        This advanced system provides contextual medical conversations with:<br>
+                        • Conversation memory and continuity<br>
+                        • Medical entity recognition<br>
+                        • Symptom analysis and urgency assessment<br>
+                        • Intelligent follow-up questions<br>
+                        <em>Initializing enhanced AI system...</em>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="context-panel" id="contextPanel">
+                <div class="context-section">
+                    <h4>🎯 Session Info</h4>
+                    <div class="conversation-stats" id="sessionStats">
+                        <div>Session: <span id="sessionId">Not started</span></div>
+                        <div>Interactions: <span id="interactionCount">0</span></div>
+                        <div>State: <span id="conversationState">initial</span></div>
+                    </div>
+                </div>
+                
+                <div class="context-section">
+                    <h4>🏥 Current Analysis</h4>
+                    <div id="currentSymptoms">
+                        <div class="context-item">
+                            <span>No symptoms detected</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="context-section">
+                    <h4>🧠 Accumulated Context</h4>
+                    <div id="accumulatedContext">
+                        <div class="context-item">
+                            <span>Building conversation context...</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="context-section">
+                    <h4>⚡ System Status</h4>
+                    <div id="systemStatus">
+                        <div class="context-item">
+                            <span>RAG Engine:</span>
+                            <span id="ragStatus">Initializing</span>
+                        </div>
+                        <div class="context-item">
+                            <span>LLM Backend:</span>
+                            <span id="llmStatus">Not connected</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="chat-input">
+            <div class="input-controls">
+                <div class="control-group">
+                    <label>Max Tokens:</label>
+                    <input type="number" id="maxTokens" value="200" min="50" max="500">
+                </div>
+                <div class="control-group">
+                    <label>Temperature:</label>
+                    <input type="number" id="temperature" value="0.7" min="0" max="2" step="0.1">
+                </div>
+                <div class="control-group">
+                    <label>Mode:</label>
+                    <select id="responseMode">
+                        <option value="enhanced">RAG Mode</option>
+                        <option value="direct">Direct LLM</option>
+                    </select>
+                </div>
+                <div class="session-controls">
+                    <button class="btn-small btn-info" onclick="testConnection()" id="testButton">Test Connection</button>
+                    <button class="btn-small btn-warning" onclick="resetConversation()" id="resetButton">Reset Session</button>
+                </div>
+            </div>
+            <div class="input-group">
+                <textarea id="messageInput" placeholder="Describe your symptoms or health concerns..." 
+                         onkeypress="handleKeyPress(event)" rows="1"></textarea>
+                <button id="sendButton" onclick="sendMessage()">
+                    <span id="sendButtonText">Send</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let isConnected = false;
+        let ragConnected = false;
+        let llmConnected = false;
+        let isLoading = false;
+        let sessionId = null;
+        let conversationContext = {};
+        let interactionCount = 0;
+        
+        const RAG_ENDPOINT = 'http://localhost:8002';
+        const DIRECT_LLM_ENDPOINT = 'http://localhost:8001';
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeSession();
+            testConnection();
+            document.getElementById('messageInput').focus();
+            
+            // Auto-resize textarea
+            const textarea = document.getElementById('messageInput');
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+        });
+
+        function initializeSession() {
+            sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            document.getElementById('sessionId').textContent = sessionId.substring(0, 16) + '...';
+            updateSessionStats();
+        }
+
+        async function testConnection() {
+            const statusElement = document.getElementById('connectionStatus');
+            const testButton = document.getElementById('testButton');
+            const ragStatus = document.getElementById('ragStatus');
+            const llmStatus = document.getElementById('llmStatus');
+            
+            statusElement.className = 'connection-status connecting';
+            testButton.disabled = true;
+            testButton.textContent = 'Testing...';
+            ragStatus.textContent = 'Testing...';
+            llmStatus.textContent = 'Testing...';
+            
+            try {
+                // Test RAG server
+                const ragResponse = await fetch(`${RAG_ENDPOINT}/health`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (ragResponse.ok) {
+                    ragStatus.textContent = '✅ Connected';
+                    ragStatus.style.color = '#28a745';
+                    ragConnected = true;
+                } else {
+                    ragStatus.textContent = '❌ Error';
+                    ragStatus.style.color = '#dc3545';
+                    ragConnected = false;
+                }
+                
+                // Test LLM backend
+                const llmResponse = await fetch(`${DIRECT_LLM_ENDPOINT}/health`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                if (llmResponse.ok) {
+                    llmStatus.textContent = '✅ Connected';
+                    llmStatus.style.color = '#28a745';
+                    llmConnected = true;
+                } else {
+                    llmStatus.textContent = '❌ Error';
+                    llmStatus.style.color = '#dc3545';
+                    llmConnected = false;
+                }
+                
+                // Update overall connection status
+                isConnected = ragConnected && llmConnected;
+                if (isConnected) {
+                    statusElement.className = 'connection-status connected';
+                    
+                    addSystemMessage(`✅ Medical Assistant Ready!
+                    
+🧠 <strong>System Status:</strong>
+• RAG Enhancement Engine: Active
+• Medical Entity Recognition: Online  
+• Conversation Memory: Initialized
+• Symptom Analysis: Ready
+• Context Building: Operational
+
+🚀 Start describing your symptoms for intelligent medical guidance.`);
+                    
+                } else if (ragConnected || llmConnected) {
+                    statusElement.className = 'connection-status partial';
+                    addSystemMessage(`⚠️ Partial Connection Available
+                    
+🧠 <strong>System Status:</strong>
+• RAG Server: ${ragConnected ? 'Connected ✅' : 'Disconnected ❌'}
+• LLM Backend: ${llmConnected ? 'Connected ✅' : 'Disconnected ❌'}
+
+${ragConnected ? '• RAG Mode available' : ''}
+${llmConnected ? '• Direct LLM mode available' : ''}
+
+Please use the appropriate mode based on available connections.`);
+                } else {
+                    throw new Error('Both servers not responding');
+                }
+                
+            } catch (error) {
+                // Handle connection errors - don't reset individual server status here
+                // as they may have been set in the try block
+                isConnected = ragConnected && llmConnected;
+                statusElement.className = isConnected ? 'connection-status connected' : 'connection-status disconnected';
+                
+                addSystemMessage(`❌ Connection failed: ${error.message}
+                
+🔧 <strong>Setup Instructions:</strong>
+1. Start RAG server: <code>python backend/medical_rag_server.py</code>
+2. Start LLM backend: <code>python ../ssh-tunnel-chatbot-setup.md</code>
+3. Verify endpoints:
+   • RAG: ${RAG_ENDPOINT}
+   • LLM: ${DIRECT_LLM_ENDPOINT}
+
+💡 Make sure both servers are running before using the enhanced chatbot.`);
+            }
+            
+            testButton.disabled = false;
+            testButton.textContent = 'Test Connection';
+        }
+
+        function formatDirectLLMResponse(data) {
+            // Format the direct LLM response with symptoms and illnesses
+            try {
+                if (data.symptoms && data.illnesses) {
+                    let response = "Based on your symptoms, here's my analysis:\n\n";
+                    
+                    // Add symptoms section
+                    if (data.symptoms.length > 0) {
+                        response += "**Symptoms Identified:**\n";
+                        data.symptoms.forEach((symptom, index) => {
+                            response += `${index + 1}. ${symptom}\n`;
+                        });
+                        response += "\n";
+                    }
+                    
+                    // Add illnesses section with coverage scores
+                    if (data.illnesses.length > 0) {
+                        response += "**Possible Conditions to Consider:**\n";
+                        data.illnesses.slice(0, 5).forEach((illness, index) => {
+                            const name = illness.name || illness;
+                            const illnessCov = illness.illness_coverage || 0;
+                            const conditionCov = illness.condition_coverage || 0;
+                            
+                            if (typeof illness === 'object' && (illnessCov || conditionCov)) {
+                                response += `${index + 1}. ${name} (Illness: ${illnessCov}%, Condition: ${conditionCov}%)\n`;
+                            } else {
+                                response += `${index + 1}. ${name}\n`;
+                            }
+                        });
+                        response += "\n";
+                    }
+                    
+                    response += "**Important:** This is a preliminary assessment. Please consult with a healthcare professional for proper diagnosis and treatment.";
+                    return response;
+                } else {
+                    // Fallback for other response formats
+                    return data.response || data.answer || JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                console.error('Error formatting direct LLM response:', error);
+                return 'Error formatting response. Please try again.';
+            }
+        }
+
+        async function sendMessage() {
+            const mode = document.getElementById('responseMode').value;
+            
+            // Check connection based on mode
+            const requiredConnection = mode === 'enhanced' ? ragConnected : llmConnected;
+            
+            if (isLoading || !requiredConnection) {
+                if (!requiredConnection) {
+                    const serverName = mode === 'enhanced' ? 'RAG server' : 'LLM backend';
+                    addSystemMessage(`❌ ${serverName} not connected. Please test connection first.`);
+                }
+                return;
+            }
+
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+
+            const maxTokens = parseInt(document.getElementById('maxTokens').value);
+            const temperature = parseFloat(document.getElementById('temperature').value);
+
+            // Add user message
+            addMessage(message, true);
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+
+            // Show enhanced loading
+            isLoading = true;
+            document.getElementById('sendButton').disabled = true;
+            addEnhancedLoadingMessage(mode);
+
+            const startTime = Date.now();
+
+            try {
+                let response;
+                
+                if (mode === 'enhanced') {
+                    // Use RAG enhancement
+                    response = await fetch(`${RAG_ENDPOINT}/enhanced-chat`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: message,
+                            session_id: sessionId,
+                            max_tokens: maxTokens,
+                            temperature: temperature
+                        })
+                    });
+                } else {
+                    // Direct LLM call
+                    response = await fetch(`${DIRECT_LLM_ENDPOINT}/diagnose`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            description: message,
+                            max_tokens: maxTokens,
+                            temperature: temperature
+                        })
+                    });
+                }
+
+                removeLoadingMessage();
+                const endTime = Date.now();
+                const responseTime = (endTime - startTime) / 1000;
+
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (mode === 'enhanced') {
+                        // Handle enhanced response
+                        addEnhancedMessage(data, responseTime);
+                        updateContextPanel(data);
+                        conversationContext = data.conversation_context;
+                        interactionCount++;
+                        updateSessionStats();
+                    } else {
+                        // Handle direct LLM response
+                        const formattedResponse = formatDirectLLMResponse(data);
+                        addMessage(formattedResponse, false, responseTime);
+                    }
+                    
+                } else {
+                    const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+                    addMessage(`❌ Error: ${errorData.detail || 'Failed to get response'}`, false);
+                }
+            } catch (error) {
+                removeLoadingMessage();
+                addMessage(`🔌 Connection error: ${error.message}. Check server status.`, false);
+            }
+
+            isLoading = false;
+            document.getElementById('sendButton').disabled = false;
+            messageInput.focus();
+        }
+
+        function addEnhancedLoadingMessage(mode) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot-message';
+            messageDiv.id = 'loadingMessage';
+            
+            const loadingText = mode === 'enhanced' 
+                ? '🧠 AI is analyzing context, extracting medical entities, and building intelligent response...'
+                : '🤖 AI is processing your message...';
+            
+            messageDiv.innerHTML = `
+                <div class="message-content loading">
+                    <span>${loadingText}</span>
+                    <div class="loading-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                </div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addEnhancedMessage(data, responseTime) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot-message enhanced-message';
+            
+            // Create context indicators
+            let contextInfo = '';
+            const symptoms = data.symptoms_detected || data.symptoms || [];
+            const entities = data.extracted_entities || {};
+            const confidence = data.confidence_score || 0;
+            
+            if (symptoms.length > 0 || Object.keys(entities).length > 0 || confidence > 0) {
+                contextInfo += '<div class="context-indicators">';
+                
+                if (symptoms.length > 0) {
+                    contextInfo += `<span class="context-tag symptoms">🔍 Symptoms: ${symptoms.length}</span>`;
+                }
+                
+                if (entities && Object.keys(entities).length > 0) {
+                    const entityCount = Object.values(entities).flat().filter(e => e && e.length > 0).length;
+                    if (entityCount > 0) {
+                        contextInfo += `<span class="context-tag entities">🏷️ Entities: ${entityCount}</span>`;
+                    }
+                }
+                
+                if (confidence > 0) {
+                    contextInfo += `<span class="context-tag confidence">📊 Confidence: ${(confidence * 100).toFixed(0)}%</span>`;
+                }
+                
+                if (data.conversation_context && data.conversation_context.urgency_level && data.conversation_context.urgency_level !== 'low') {
+                    contextInfo += `<span class="context-tag urgency">⚡ ${data.conversation_context.urgency_level.toUpperCase()}</span>`;
+                }
+                
+                if (data.conversation_context && data.conversation_context.conversation_state) {
+                    contextInfo += `<span class="context-tag state">🎯 ${data.conversation_context.conversation_state.replace('_', ' ')}</span>`;
+                }
+                
+                contextInfo += '</div>';
+            }
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${contextInfo}
+                    ${data.response}
+                </div>
+                <div class="timestamp">
+                    ${new Date().toLocaleTimeString()} 
+                    <span class="processing-time">(${responseTime.toFixed(2)}s)</span>
+                    <span class="enhanced-indicator">🧠 RAG Mode</span>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addMessage(content, isUser = false, processingTime = null) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
+            
+            let timestampHTML = `<div class="timestamp">${new Date().toLocaleTimeString()}`;
+            if (processingTime) {
+                timestampHTML += ` <span class="processing-time">(${processingTime.toFixed(2)}s)</span>`;
+            }
+            timestampHTML += `</div>`;
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">${content}</div>
+                ${timestampHTML}
+            `;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addSystemMessage(message) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message system-message';
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${message.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/`(.*?)`/g, '<code>$1</code>')}
+                </div>
+                <div class="timestamp">${new Date().toLocaleTimeString()}</div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function removeLoadingMessage() {
+            const loadingMessage = document.getElementById('loadingMessage');
+            if (loadingMessage) {
+                loadingMessage.remove();
+            }
+        }
+
+        function updateContextPanel(data) {
+            // Update current symptoms
+            const symptomsContainer = document.getElementById('currentSymptoms');
+            const symptoms = data.symptoms_detected || data.symptoms || [];
+            
+            if (symptoms.length > 0) {
+                symptomsContainer.innerHTML = symptoms.map(symptom => {
+                    const name = typeof symptom === 'string' ? symptom : symptom.symptom || 'Unknown';
+                    const confidence = typeof symptom === 'object' ? symptom.confidence || 0 : 0;
+                    const urgency = typeof symptom === 'object' ? symptom.urgency || 'unknown' : 'unknown';
+                    
+                    return `
+                        <div class="context-item">
+                            <span>${name}</span>
+                            <div>
+                                <div class="confidence-bar">
+                                    <div class="confidence-fill" style="width: ${confidence * 100}%"></div>
+                                </div>
+                                <div class="urgency-indicator urgency-${urgency}">${urgency}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                symptomsContainer.innerHTML = '<div class="context-item"><span>No symptoms detected</span></div>';
+            }
+            
+            // Update accumulated context
+            const contextContainer = document.getElementById('accumulatedContext');
+            const context = data.conversation_context || {};
+            
+            let contextHTML = '';
+            if (context.accumulated_symptoms && context.accumulated_symptoms.length > 0) {
+                contextHTML += `<div class="context-item"><span>Total Symptoms:</span><span>${context.accumulated_symptoms.length}</span></div>`;
+            }
+            if (context.accumulated_conditions && context.accumulated_conditions.length > 0) {
+                contextHTML += `<div class="context-item"><span>Conditions:</span><span>${context.accumulated_conditions.length}</span></div>`;
+            }
+            if (context.conversation_summary) {
+                contextHTML += `<div class="context-item" style="flex-direction: column; align-items: flex-start;"><span style="font-weight: bold;">Summary:</span><span style="font-size: 10px; margin-top: 4px;">${context.conversation_summary}</span></div>`;
+            }
+            
+            if (contextHTML) {
+                contextContainer.innerHTML = contextHTML;
+            } else {
+                contextContainer.innerHTML = '<div class="context-item"><span>Building context...</span></div>';
+            }
+        }
+
+        function updateSessionStats() {
+            document.getElementById('interactionCount').textContent = interactionCount;
+            const state = conversationContext.conversation_state || 'initial';
+            document.getElementById('conversationState').textContent = state.replace('_', ' ');
+        }
+
+        async function resetConversation() {
+            if (confirm('Are you sure you want to reset the conversation? All context will be lost.')) {
+                try {
+                    await fetch(`${RAG_ENDPOINT}/reset-conversation/${sessionId}`, {
+                        method: 'DELETE'
+                    });
+                    
+                    // Reset local state
+                    initializeSession();
+                    conversationContext = {};
+                    interactionCount = 0;
+                    updateSessionStats();
+                    
+                    // Clear messages except system message
+                    const messagesContainer = document.getElementById('chatMessages');
+                    messagesContainer.innerHTML = `
+                        <div class="message system-message">
+                            <div class="message-content">
+                                🔄 <strong>Conversation Reset</strong><br>
+                                Session has been reset. All previous context cleared.<br>
+                                Ready for a new conversation.
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Reset context panel
+                    document.getElementById('currentSymptoms').innerHTML = '<div class="context-item"><span>No symptoms detected</span></div>';
+                    document.getElementById('accumulatedContext').innerHTML = '<div class="context-item"><span>Building conversation context...</span></div>';
+                    
+                } catch (error) {
+                    addSystemMessage(`❌ Error resetting conversation: ${error.message}`);
+                }
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Export session data for debugging
+        function exportSessionData() {
+            const sessionData = {
+                sessionId: sessionId,
+                interactionCount: interactionCount,
+                conversationContext: conversationContext,
+                timestamp: new Date().toISOString()
+            };
+            
+            const blob = new Blob([JSON.stringify(sessionData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `medical-chat-session-${sessionId}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // Add keyboard shortcut for export (Ctrl+E)
+        document.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'e') {
+                e.preventDefault();
+                exportSessionData();
+            }
+        });
+    </script>
+</body>
+</html>

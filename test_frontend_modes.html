@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Frontend Modes</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .result { margin: 10px 0; padding: 10px; border-radius: 3px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Frontend Connection Mode Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Individual Server Connections</h2>
+        <button onclick="testRAGServer()">Test RAG Server</button>
+        <button onclick="testLLMServer()">Test LLM Server</button>
+        <div id="connectionResults"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Direct LLM Mode</h2>
+        <textarea id="symptomInput" placeholder="Enter symptoms (e.g., 'shortness of breath, pain in chest and fatigue during exertion')" style="width: 100%; height: 60px;"></textarea><br>
+        Max Tokens: <input type="number" id="maxTokens" value="150" style="width: 80px;">
+        Temperature: <input type="number" id="temperature" value="0.7" step="0.1" style="width: 80px;"><br>
+        <button onclick="testDirectLLM()">Test Direct LLM</button>
+        <div id="directLLMResults"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Parameter Effects</h2>
+        <button onclick="testLowTemp()">Test Low Temperature (0.1)</button>
+        <button onclick="testHighTemp()">Test High Temperature (0.9)</button>
+        <button onclick="testLowTokens()">Test Low Tokens (50)</button>
+        <button onclick="testHighTokens()">Test High Tokens (200)</button>
+        <div id="parameterResults"></div>
+    </div>
+
+    <script>
+        let ragConnected = false;
+        let llmConnected = false;
+        
+        async function testRAGServer() {
+            const resultDiv = document.getElementById('connectionResults');
+            try {
+                const response = await fetch('http://localhost:8002/health');
+                if (response.ok) {
+                    ragConnected = true;
+                    resultDiv.innerHTML += '<div class="result success">✅ RAG Server: Connected</div>';
+                } else {
+                    ragConnected = false;
+                    resultDiv.innerHTML += '<div class="result error">❌ RAG Server: Failed</div>';
+                }
+            } catch (error) {
+                ragConnected = false;
+                resultDiv.innerHTML += `<div class="result error">❌ RAG Server: ${error.message}</div>`;
+            }
+        }
+        
+        async function testLLMServer() {
+            const resultDiv = document.getElementById('connectionResults');
+            try {
+                const response = await fetch('http://localhost:8001/health');
+                if (response.ok) {
+                    llmConnected = true;
+                    resultDiv.innerHTML += '<div class="result success">✅ LLM Server: Connected</div>';
+                } else {
+                    llmConnected = false;
+                    resultDiv.innerHTML += '<div class="result error">❌ LLM Server: Failed</div>';
+                }
+            } catch (error) {
+                llmConnected = false;
+                resultDiv.innerHTML += `<div class="result error">❌ LLM Server: ${error.message}</div>`;
+            }
+        }
+        
+        async function testDirectLLM() {
+            const symptom = document.getElementById('symptomInput').value || 'shortness of breath, pain in chest and fatigue during exertion';
+            const maxTokens = parseInt(document.getElementById('maxTokens').value);
+            const temperature = parseFloat(document.getElementById('temperature').value);
+            const resultDiv = document.getElementById('directLLMResults');
+            
+            resultDiv.innerHTML = '<div>Testing direct LLM...</div>';
+            
+            try {
+                const response = await fetch('http://localhost:8001/diagnose', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        description: symptom,
+                        max_tokens: maxTokens,
+                        temperature: temperature
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="result success">
+                            ✅ Direct LLM Test Successful!<br>
+                            📊 Symptoms Found: ${data.symptoms ? data.symptoms.length : 0}<br>
+                            🔍 Illnesses Found: ${data.illnesses ? data.illnesses.length : 0}<br>
+                            🧠 Parameters: max_tokens=${maxTokens}, temperature=${temperature}
+                        </div>
+                        <details>
+                            <summary>Raw Response</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Error: ${response.status} ${response.statusText}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Connection Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function testParameter(temp, tokens, description) {
+            const symptom = 'shortness of breath, pain in chest and fatigue during exertion';
+            const resultDiv = document.getElementById('parameterResults');
+            
+            try {
+                const response = await fetch('http://localhost:8001/diagnose', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        description: symptom,
+                        max_tokens: tokens,
+                        temperature: temp
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML += `
+                        <div class="result success">
+                            ✅ ${description}: ${data.symptoms ? data.symptoms.length : 0} symptoms, ${data.illnesses ? data.illnesses.length : 0} illnesses
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML += `<div class="result error">❌ ${description}: Failed</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML += `<div class="result error">❌ ${description}: ${error.message}</div>`;
+            }
+        }
+        
+        async function testLowTemp() { await testParameter(0.1, 150, 'Low Temperature (0.1)'); }
+        async function testHighTemp() { await testParameter(0.9, 150, 'High Temperature (0.9)'); }
+        async function testLowTokens() { await testParameter(0.7, 50, 'Low Tokens (50)'); }
+        async function testHighTokens() { await testParameter(0.7, 200, 'High Tokens (200)'); }
+        
+        // Auto-test connections on load
+        window.onload = () => {
+            testRAGServer();
+            testLLMServer();
+        };
+    </script>
+</body>
+</html>

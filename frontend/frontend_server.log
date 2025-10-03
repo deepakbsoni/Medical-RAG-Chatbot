@@ -1,0 +1,10 @@
+127.0.0.1 - - [03/Oct/2025 15:36:18] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [03/Oct/2025 15:37:24] "GET /enhanced-medical-chatbot.html HTTP/1.1" 304 -
+127.0.0.1 - - [03/Oct/2025 16:03:46] code 404, message File not found
+127.0.0.1 - - [03/Oct/2025 16:03:46] "GET /test_direct_llm.html HTTP/1.1" 404 -
+127.0.0.1 - - [03/Oct/2025 16:06:22] code 404, message File not found
+127.0.0.1 - - [03/Oct/2025 16:06:22] "GET /test_frontend_modes.html HTTP/1.1" 404 -
+127.0.0.1 - - [03/Oct/2025 16:09:00] code 404, message File not found
+127.0.0.1 - - [03/Oct/2025 16:09:00] "GET /test_frontend_modes.html HTTP/1.1" 404 -
+127.0.0.1 - - [03/Oct/2025 16:09:11] "GET /enhanced-medical-chatbot.html HTTP/1.1" 200 -
+127.0.0.1 - - [03/Oct/2025 16:09:47] "GET /enhanced-medical-chatbot.html HTTP/1.1" 304 -

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Direct LLM</title>
+</head>
+<body>
+    <h1>Direct LLM Test</h1>
+    <button onclick="testDirectLLM()">Test Direct LLM</button>
+    <div id="result"></div>
+
+    <script>
+        async function testDirectLLM() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing...';
+            
+            try {
+                console.log('Making direct LLM request...');
+                const response = await fetch('http://localhost:8001/diagnose', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        description: "shortness of breath, pain in chest and fatigue during exertion",
+                        max_tokens: 100,
+                        temperature: 0.7
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    resultDiv.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <p>Symptoms: ${data.symptoms ? data.symptoms.length : 0}</p>
+                        <p>Illnesses: ${data.illnesses ? data.illnesses.length : 0}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `❌ Error: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                console.error('Fetch error:', error);
+                resultDiv.innerHTML = `❌ Connection error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
