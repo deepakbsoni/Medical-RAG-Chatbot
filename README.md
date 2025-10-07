@@ -13,6 +13,8 @@ This advanced RAG (Retrieval-Augmented Generation) system transforms a basic med
 - **Provides** real-time context visualization and confidence scoring
 
 ---
+<img width="1220" height="826" alt="Medical AI Assistant" src="https://github.com/user-attachments/assets/d84a40e2-39e4-4bf1-9bb5-bff15e1b67ae" />
+
 
 ## 🚀 Quick Start Guide
 
