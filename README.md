@@ -16,6 +16,11 @@ This advanced RAG (Retrieval-Augmented Generation) system transforms a basic med
 <img width="1220" height="826" alt="Medical AI Assistant" src="https://github.com/user-attachments/assets/d84a40e2-39e4-4bf1-9bb5-bff15e1b67ae" />
 
 
+## 🚀 Architecture
+
+<img width="892" height="1621" alt="oci-enhanced-architecture" src="https://github.com/user-attachments/assets/fdede137-7bf8-49d9-871c-e7f4199174c0" />
+
+
 ## 🚀 Quick Start Guide
 
 ### Prerequisites
